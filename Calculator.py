@@ -12,6 +12,11 @@ def clear_expression():
     expression_label.config(text="")
 
 
+def delete_last_char():
+    current_text = expression_label["text"]
+    expression_label.config(text=current_text[:-1])
+
+
 def evaluate():
     try:
         current_text = expression_label["text"]
@@ -23,6 +28,7 @@ def evaluate():
 
 root = tk.Tk()
 root.title("Calculator")
+root.geometry("400x300")
 
 expression_label = tk.Label(root, text="", anchor="e", bg="white", fg="black", font=("Arial", 24), relief="sunken")
 expression_label.grid(row=0, column=0, columnspan=4, sticky="nsew")
@@ -32,7 +38,8 @@ buttons = [
     '7', '8', '9', '*',
     '4', '5', '6', '-',
     '1', '2', '3', '+',
-    '0', '.', '^', '='
+    '0', '.', '^', '=',
+    'DEL'
 ]
 
 row_val = 1
@@ -42,6 +49,8 @@ for button in buttons:
         action = clear_expression
     elif button == "=":
         action = evaluate
+    elif button == "DEL":
+        action = delete_last_char
     else:
         action = lambda x=button: update_expression(x)
 
