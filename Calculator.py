@@ -22,13 +22,13 @@ def evaluate():
         current_text = expression_label["text"]
         result = evaluate_expression(current_text)
         expression_label.config(text=str(result))
-    except Exception as e:
+    except Exception:
         expression_label.config(text="Error")
 
 
 root = tk.Tk()
 root.title("Calculator")
-root.geometry("400x300")
+root.geometry("650x480")
 
 expression_label = tk.Label(root, text="", anchor="e", bg="white", fg="black", font=("Arial", 24), relief="sunken")
 expression_label.grid(row=0, column=0, columnspan=4, sticky="nsew")
@@ -38,8 +38,7 @@ buttons = [
     '7', '8', '9', '*',
     '4', '5', '6', '-',
     '1', '2', '3', '+',
-    '0', '.', '^', '=',
-    'DEL'
+    '0', 'DEL', '='
 ]
 
 row_val = 1

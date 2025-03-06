@@ -1,12 +1,10 @@
 from collections import deque
 
-
 # Operator class to hold precedence and arguments
 class Operator:
     def __init__(self, precedence, arguments):
         self.precedence = precedence
         self.arguments = arguments
-
 
 # Mapping of operators and their precedence
 operator_map = {
@@ -15,11 +13,6 @@ operator_map = {
     '+': Operator(2, 2),
     '-': Operator(1, 2)
 }
-
-
-# Expression to be evaluated
-expression = "-((1+2)/((6*-7)+(7*-4)/2)-3)"
-
 
 # Symbol class to represent different types of symbols in the expression
 class Symbol:
@@ -35,112 +28,100 @@ class Symbol:
         self.type = symbol_type
         self.op = op if op else Operator(0, 0)
 
+# Function to evaluate an expression
+def evaluate_expression(expression: str) -> float:
+    # Parser
+    stkHolding = deque()  # Holding stack for operators and parentheses
+    stkOutput = deque()  # Output stack for RPN
+    symPrevious = Symbol("0", Symbol.Type.Unknown)
+    pass_num = 0
 
-# Initialize stacks
-stkHolding = deque()  # Holding stack for operators and parentheses
-stkOutput = deque()  # Output stack for RPN
-symPrevious = Symbol("0", Symbol.Type.Literal_Numeric)
-pass_num = 0
+    # Process the expression
+    for c in expression:
+        if c.isdigit():
+            # Push literals directly to output
+            stkOutput.append(Symbol(symbol=str(c), symbol_type=Symbol.Type.Literal_Numeric))
+            symPrevious = stkOutput[-1]
+        elif c == '(':
+            # Push open parenthesis to holding stack
+            stkHolding.appendleft(Symbol(symbol=str(c), symbol_type=Symbol.Type.Parenthesis_Open))
+            symPrevious = stkHolding[0]
+        elif c == ')':
+            # Backflush holding stack into output until open parenthesis
+            while len(stkHolding) != 0 and stkHolding[0].type != Symbol.Type.Parenthesis_Open:
+                stkOutput.append(stkHolding.popleft())
 
-# Process the expression
-for c in expression:
-    if c.isdigit():
-        # Push literals directly to output
-        stkOutput.append(Symbol(symbol=str(c), symbol_type=Symbol.Type.Literal_Numeric))
-        symPrevious = stkOutput[-1]
-    elif c == '(':
-        # Push open parenthesis to holding stack
-        stkHolding.appendleft(Symbol(symbol=str(c), symbol_type=Symbol.Type.Parenthesis_Open))
-        symPrevious = stkHolding[0]
-    elif c == ')':
-        # Backflush holding stack into output until open parenthesis
-        while stkHolding and stkHolding[0].type != Symbol.Type.Parenthesis_Open:
-            stkOutput.append(stkHolding.popleft())
+            if len(stkHolding) == 0:
+                raise ValueError(f"Unexpected parenthesis '{c}'")
 
-        if not stkHolding:
-            print(f"!!!! ERROR! Unexpected parenthesis '{c}'")
-            exit(0)
+            # Remove the corresponding open parenthesis
+            stkHolding.popleft()
+            symPrevious = Symbol(symbol=str(c), symbol_type=Symbol.Type.Parenthesis_Close)
+        elif c in operator_map:
+            # Handle operator
+            new_op = operator_map[c]
 
-        # Remove the corresponding open parenthesis
-        stkHolding.popleft()
-        symPrevious = Symbol(symbol=str(c), symbol_type=Symbol.Type.Parenthesis_Close)
-    elif c in operator_map:
-        # Handle operator
-        new_op = operator_map[c]
+            # Check for unary operators (+ or -)
+            if c in ['-', '+']:
+                if symPrevious.type not in [Symbol.Type.Literal_Numeric, Symbol.Type.Parenthesis_Close]:
+                    # Unary operator case (e.g., leading minus or after opening parenthesis or another operator)
+                    new_op = Operator(100, 1)  # Higher precedence for unary minus/plus
 
-        # Check for unary operators (+ or -)
-        if c in ['-', '+']:
-            if symPrevious.type not in [Symbol.Type.Literal_Numeric, Symbol.Type.Parenthesis_Close]:
-                # Unary operator case (e.g., leading minus or after opening parenthesis or another operator)
-                new_op.arguments = 1
-                new_op.precedence = 100  # Higher precedence for unary minus/plus
-            else:
-                new_op.arguments = 2  # Regular binary operator
-
-        # Pop operators from holding stack if they have higher precedence
-        while stkHolding and stkHolding[0].type != Symbol.Type.Parenthesis_Open:
-            if stkHolding[0].type == Symbol.Type.Operator:
-                holding_stack_op = stkHolding[0].op
-                if holding_stack_op.precedence >= new_op.precedence:
-                    stkOutput.append(stkHolding.popleft())
+            # Pop operators from holding stack if they have higher precedence
+            while len(stkHolding) != 0 and stkHolding[0].type != Symbol.Type.Parenthesis_Open:
+                if stkHolding[0].type == Symbol.Type.Operator:
+                    holding_stack_op = stkHolding[0].op
+                    if holding_stack_op.precedence >= new_op.precedence:
+                        stkOutput.append(stkHolding.popleft())
+                    else:
+                        break
                 else:
                     break
-            else:
-                break
 
-        # Push the new operator to the holding stack
-        stkHolding.appendleft(Symbol(symbol=str(c), symbol_type=Symbol.Type.Operator, op=new_op))
-        symPrevious = stkHolding[0]
-    else:
-        print(f"Bad Symbol: '{c}'")
-        exit(0)
+            # Push the new operator to the holding stack
+            stkHolding.appendleft(Symbol(symbol=str(c), symbol_type=Symbol.Type.Operator, op=new_op))
+            symPrevious = stkHolding[0]
+        else:
+            raise ValueError(f"Bad Symbol: '{c}'")
 
-    pass_num += 1
+        pass_num += 1
 
-# Drain the holding stack into output
-while stkHolding:
-    stkOutput.append(stkHolding.popleft())
+    # Drain the holding stack into output
+    while len(stkHolding) != 0:
+        stkOutput.append(stkHolding.popleft())
 
-# Print the RPN expression
-print(f"Expression:= {expression}")
-print("RPN       := ", end="")
-for s in stkOutput:
-    print(s.symbol, end="")
-print()
+    # Solver
+    stkSolve = deque()
 
-# Solve the RPN expression
-stkSolve = deque()
+    for inst in stkOutput:
+        if inst.type == Symbol.Type.Literal_Numeric:
+            stkSolve.append(float(inst.symbol))
+        elif inst.type == Symbol.Type.Operator:
+            # Make sure there are enough operands on the stack before popping
+            if len(stkSolve) < inst.op.arguments:
+                raise ValueError("Insufficient operands for operation")
 
-for inst in stkOutput:
-    if inst.type == Symbol.Type.Literal_Numeric:
-        stkSolve.appendleft(float(inst.symbol))
-    elif inst.type == Symbol.Type.Operator:
-        # Make sure there are enough operands on the stack before popping
-        if len(stkSolve) < inst.op.arguments:
-            print("Error: Insufficient operands for operation")
-            exit(0)
+            # Pop operands for the operation
+            mem = [stkSolve.pop() for _ in range(inst.op.arguments)]
 
-        # Pop operands for the operation
-        mem = [stkSolve.popleft() for _ in range(inst.op.arguments)]
+            result = 0.0
+            if inst.op.arguments == 2:
+                if inst.symbol == '/':
+                    result = mem[1] / mem[0]
+                elif inst.symbol == '*':
+                    result = mem[1] * mem[0]
+                elif inst.symbol == '+':
+                    result = mem[1] + mem[0]
+                elif inst.symbol == '-':
+                    result = mem[1] - mem[0]
 
-        result = 0.0
-        if inst.op.arguments == 2:
-            if inst.symbol == '/':
-                result = mem[1] / mem[0]
-            elif inst.symbol == '*':
-                result = mem[1] * mem[0]
-            elif inst.symbol == '+':
-                result = mem[1] + mem[0]
-            elif inst.symbol == '-':
-                result = mem[1] - mem[0]
+            if inst.op.arguments == 1:
+                if inst.symbol == '+':
+                    result = +mem[0]
+                elif inst.symbol == '-':
+                    result = -mem[0]
 
-        if inst.op.arguments == 1:
-            if inst.symbol == '+':
-                result = +mem[0]
-            elif inst.symbol == '-':
-                result = -mem[0]
+            stkSolve.append(result)
 
-        stkSolve.appendleft(result)
-
-# Output the result
-print(f"Result    := {stkSolve[0]}")
+    # Return the final result
+    return stkSolve[0]
